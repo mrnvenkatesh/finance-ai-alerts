@@ -62,8 +62,24 @@ gcloud builds submit --tag "$IMAGE_TAG" .
 echo "📌 [4/5] Deploying Cloud Run Job..."
 ENV_FILE_FLAGS=""
 if [ -f .env ]; then
-    echo "   Using environment variables from local .env file..."
-    ENV_FILE_FLAGS="--env-vars-file=.env"
+    echo "   Converting .env configuration for Cloud Run..."
+    TMP_ENV_YAML=$(mktemp /tmp/gcp_env_XXXXXX.yaml)
+    python3 -c '
+with open(".env", "r", encoding="utf-8") as f:
+    for line in f:
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        k, v = line.split("=", 1)
+        k = k.strip()
+        v = v.strip().strip("\"'\")
+        if k and v:
+            # Escape backslashes and double quotes in YAML value
+            v_escaped = v.replace("\\", "\\\\").replace("\"", "\\\"")
+            print(f"{k}: \"{v_escaped}\"")
+' > "$TMP_ENV_YAML"
+    ENV_FILE_FLAGS="--env-vars-file=$TMP_ENV_YAML"
+    trap 'rm -f "$TMP_ENV_YAML"' EXIT
 fi
 
 gcloud run jobs deploy "$JOB_NAME" \

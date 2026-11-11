@@ -1,0 +1,16 @@
+.env
+.env.*
+!.env.example
+.venv
+venv
+env
+__pycache__
+*.py[cod]
+*.pyo
+output/
+!output/.gitkeep
+.git
+.github
+.gitignore
+.DS_Store
+*.swp

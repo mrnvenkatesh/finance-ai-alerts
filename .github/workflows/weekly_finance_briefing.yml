@@ -2,20 +2,23 @@ name: Weekly Finance & Agentic AI Intelligence Briefing
 
 on:
   schedule:
-    # 03:25 UTC = 08:55 AM IST every Saturday (Offsets slightly from peak :30 to avoid GitHub runner queue delays)
+    # 03:25 UTC = 08:55 AM IST every Saturday (offsets slightly from :30 peak to avoid runner delays)
     - cron: '25 3 * * 6'
   workflow_dispatch:
     inputs:
       dry_run:
-        description: 'Run in dry-run mode (do not send email, upload output artifacts)'
+        description: 'Run in dry-run mode (generate preview files only, do not send email)'
         required: false
-        default: 'false'
+        default: false
         type: boolean
       hours:
-        description: 'Lookback window in hours'
+        description: 'Lookback window in hours (default: 168 = 7 days)'
         required: false
         default: '168'
         type: string
+
+permissions:
+  contents: read
 
 jobs:
   build-and-send:
@@ -42,24 +45,28 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           RECIPIENT_EMAIL: ${{ secrets.RECIPIENT_EMAIL }}
           SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-          SMTP_HOST: ${{ secrets.SMTP_HOST }}
-          SMTP_PORT: ${{ secrets.SMTP_PORT }}
-          SMTP_USER: ${{ secrets.SMTP_USER }}
+          SMTP_HOST: ${{ secrets.SMTP_HOST || 'smtp.gmail.com' }}
+          SMTP_PORT: ${{ secrets.SMTP_PORT || '587' }}
+          SMTP_USER: ${{ secrets.SMTP_USER || secrets.SENDER_EMAIL }}
           SMTP_PASS: ${{ secrets.SMTP_PASS }}
           TIMEZONE: 'Asia/Kolkata'
-          HOURS_LOOKBACK: ${{ inputs.hours || '168' }}
         run: |
+          ARGS="--now"
           if [ "${{ inputs.dry_run }}" = "true" ]; then
-            python src/scheduler.py --now --dry-run --hours ${{ inputs.hours || 168 }}
-          else
-            python src/scheduler.py --now --hours ${{ inputs.hours || 168 }}
+            ARGS="$ARGS --dry-run"
           fi
+          HOURS="${{ inputs.hours }}"
+          if [ -n "$HOURS" ]; then
+            ARGS="$ARGS --hours $HOURS"
+          else
+            ARGS="$ARGS --hours 168"
+          fi
+          python src/scheduler.py $ARGS
 
       - name: Upload Briefing Artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: weekly-finance-briefing-output
+          name: weekly-finance-briefing-output-${{ github.run_id }}
           path: output/
           retention-days: 14
-
