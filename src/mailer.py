@@ -340,6 +340,28 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       color: #475569;
       font-family: 'JetBrains Mono', monospace;
     }
+    .footer-contribute {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px dashed rgba(16, 185, 129, 0.15);
+    }
+    .footer-contribute a {
+      color: #34d399;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 12px;
+      font-family: 'JetBrains Mono', monospace;
+      padding: 7px 16px;
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 6px;
+      display: inline-block;
+    }
+    .footer-contribute a:hover {
+      background: rgba(16, 185, 129, 0.2);
+      border-color: #10b981;
+      color: #6ee7b7;
+    }
   </style>
 </head>
 <body>
@@ -463,6 +485,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <div class="footer">
         <p class="footer-note">Weekly Finance AI & Agentic Intelligence Aggregator &bull; Autonomous Briefing Pipeline</p>
         <p class="footer-subnote">Delivered Weekly Every Saturday at 09:00 AM IST &bull; Asia/Kolkata</p>
+        <div class="footer-contribute">
+          <p style="margin: 0 0 10px 0; color: #94a3b8; font-size: 12px;">Want to suggest new finance AI sources or improvements?</p>
+          <a href="https://github.com/mrnvenkatesh/finance-ai-alerts" target="_blank" rel="noopener">
+            Contribute on GitHub &rarr;
+          </a>
+        </div>
       </div>
 
     </div>
@@ -512,7 +540,9 @@ Summary: {{ item.summary }}
 {% endfor %}
 {% endif %}
 
+====================================================================
 Delivered automatically via Scheduled Weekly Pipeline (Saturday 9:00 AM IST).
+Contribute or suggest improvements on GitHub: https://github.com/mrnvenkatesh/finance-ai-alerts
 """
 
 

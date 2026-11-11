@@ -1,0 +1,86 @@
+name: CI Smoke Test & Validation (Zero Secrets)
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      hours:
+        description: 'Lookback window in hours'
+        required: false
+        default: '168'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  smoke-test:
+    name: Run Dry-Run Pipeline & Verify Artifacts
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Verify Component Imports
+        run: |
+          python -c "
+          from src.fetcher import FinanceNewsFetcher
+          from src.synthesizer import FinanceNewsSynthesizer
+          from src.mailer import FinanceDigestMailer
+          from src.scheduler import run_pipeline
+          print('✅ All core modules imported successfully.')
+          "
+
+      - name: Run Dry-Run Pipeline (Requires Zero Secrets)
+        # In dry-run mode, no SMTP credentials are required.
+        # If GEMINI_API_KEY is not in secrets, the synthesizer automatically
+        # uses the domain-tailored heuristic fallback engine.
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          TIMEZONE: 'Asia/Kolkata'
+          HOURS_LOOKBACK: ${{ inputs.hours || '168' }}
+        run: |
+          HOURS="${{ inputs.hours }}"
+          if [ -z "$HOURS" ]; then
+            HOURS="168"
+          fi
+          echo "Executing dry-run pipeline with lookback: ${HOURS}h..."
+          python src/scheduler.py --now --dry-run --hours "$HOURS"
+
+      - name: Verify Generated Output Files
+        run: |
+          echo "Checking output directory..."
+          ls -la output/
+          HTML_COUNT=$(find output -maxdepth 1 -name "digest_finance_*.html" | wc -l)
+          TXT_COUNT=$(find output -maxdepth 1 -name "digest_finance_*.txt" | wc -l)
+          if [ "$HTML_COUNT" -eq 0 ] || [ "$TXT_COUNT" -eq 0 ]; then
+            echo "❌ Error: Missing generated briefing files in output/"
+            exit 1
+          fi
+          echo "✅ Successfully verified $HTML_COUNT HTML and $TXT_COUNT plain-text digest files."
+
+      - name: Upload Test Output Artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-briefing-preview-${{ github.run_id }}
+          path: output/
+          retention-days: 7
